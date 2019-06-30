@@ -1,5 +1,7 @@
 #pragma once
 
+void onClick(uint, uint);
+
 void events()
 {
 	static SDL_Event e;
@@ -15,7 +17,8 @@ void events()
 			return;
 			break;
 		case SDL_MOUSEBUTTONDOWN:
-			//printf("Mouse click at (%d, %d)\n", event.button.x, event.button.y);
+			printf("Mouse click at (%d, %d)\n", e.button.x, e.button.y);
+			onClick(e.button.x, e.button.y);
 			return;
 			break;
 		case SDL_KEYDOWN:

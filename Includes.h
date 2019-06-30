@@ -15,4 +15,3 @@
 #include "Graphics.h"
 #include "Timing.h"
 #include "Events.h"
-#include "Win.h"

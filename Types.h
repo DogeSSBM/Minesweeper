@@ -16,5 +16,3 @@ typedef int64_t i64;
 
 typedef SDL_Rect Rect;
 typedef SDL_Color Color;
-
-typedef u16 piece;
