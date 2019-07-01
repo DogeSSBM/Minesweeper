@@ -116,13 +116,17 @@ typedef struct{
 
 void setFontSize(int size)
 {
-	if(size != gfx.fontSize){
-		if(gfx.font != NULL){
-			TTF_CloseFont(gfx.font);
-		}
-		gfx.fontSize = size;
-		gfx.font = TTF_OpenFont("./LiberationMono.ttf", gfx.fontSize);
-	}
+	if(size == gfx.fontSize)
+		return;
+	if(gfx.font != NULL)
+		TTF_CloseFont(gfx.font);
+	gfx.fontSize = size;
+	gfx.font = TTF_OpenFont("./LiberationMono.ttf", gfx.fontSize);
+}
+
+void setFontColor(Color c)
+{
+	gfx.fontColor = c;
 }
 
 void TB_setText(TextBox *tb, const char *text)

@@ -1,6 +1,7 @@
 #pragma once
 
-void onClick(uint, uint);
+void clickL(uint, uint);
+void clickR(uint, uint);
 
 void events()
 {
@@ -8,7 +9,7 @@ void events()
 	while(SDL_PollEvent(&e)){
 		switch(e.type){
 		case SDL_QUIT:
-			printf("Quitting now!\n");
+			printf("\nQuitting now!\n");
 			exit(0);
 			return;
 			break;
@@ -18,7 +19,10 @@ void events()
 			break;
 		case SDL_MOUSEBUTTONDOWN:
 			printf("Mouse click at (%d, %d)\n", e.button.x, e.button.y);
-			onClick(e.button.x, e.button.y);
+			if(e.button.button == SDL_BUTTON_LEFT)
+				clickL(e.button.x, e.button.y);
+			if(e.button.button == SDL_BUTTON_RIGHT)
+				clickR(e.button.x, e.button.y);
 			return;
 			break;
 		case SDL_KEYDOWN:

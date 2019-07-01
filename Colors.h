@@ -1,5 +1,17 @@
 #pragma once
 
+Color rgbToColor(const uint R, const uint G, const uint B)
+{
+	Color C = {R, G, B, 0xFF};
+	return C;
+}
+
+Color rgbaToColor(const uint R, const uint G, const uint B, const uint A)
+{
+	Color C = {R, G, B, A};
+	return C;
+}
+
 const Color WHITE		= {0xFF, 0xFF, 0xFF, 0xFF};
 const Color PINK		= {0xFF, 0xC0, 0xCB, 0xFF};
 const Color RED 		= {0xFF, 0x00, 0x00, 0xFF};

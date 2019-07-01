@@ -4,7 +4,7 @@
 
 #define GRIDX_DEFAULT		30
 #define GRIDY_DEFAULT		16
-#define NUMBOMBS_DEFAULT	99
+#define NUMBOMBS_DEFAULT	70
 
 uint GRIDX, GRIDY, NUMBOMBS;
 
@@ -20,6 +20,9 @@ typedef struct{
 }Box;
 
 Box **grid = NULL;
+
+#include "Print.h"
+#include "Draw.h"
 
 void freeGrid(void)
 {
@@ -40,45 +43,28 @@ uint getAdjacent(uint x, uint y)
 	if(grid[x][y].bomb)
 		return count;
 	for(uint yoff = y>0 ? y-1 : y; yoff < GRIDY && yoff <= y+1; yoff++){
-	for(uint xoff = x>0 ? x-1 : x; xoff < GRIDX && xoff <= x+1; xoff++){
-		printf("checking (%u, %u)\n", xoff, yoff);
-		events();
-		if(xoff != x || yoff != y)
-			count += grid[xoff][yoff].bomb;
-	}
+		for(uint xoff = x>0 ? x-1 : x; xoff < GRIDX && xoff <= x+1; xoff++){
+			printf("checking (%u, %u)\n", xoff, yoff);
+			events();
+			if(xoff != x || yoff != y)
+				count += grid[xoff][yoff].bomb;
+		}
 	}
 	printf(" found %u\n", count);
 	return count;
 }
 
-void printGrid(void)
-{
-	for(uint y = 0; y < GRIDY; ++y){
-		for(uint x = 0; x < GRIDX; ++x){
-			putc(grid[x][y].bomb ? 'B' : '-', stdout);
-			putc(' ', stdout);
-		}
-		putc('\n', stdout);
-	}
-	putc('\n', stdout);
-}
-
 void initGrid(void)
 {
+	setFontSize(SCALE-SCALE/8);
 	grid = malloc(sizeof(Box*) * GRIDX);
 	for(uint x = 0; x < GRIDX; ++x) {
 		grid[x] = malloc(sizeof(Box) * GRIDY);
+		memset(grid[x], 0, sizeof(Box) * GRIDY);
 	}
 	printf("Adding freeGrid to atexit()\n");
 	atexit(freeGrid);
-	for(uint y = 0; y < GRIDY; y++){ // set default values
-		for(uint x = 0; x < GRIDX; x++){
-			grid[x][y].bomb = false;
-			grid[x][y].clear = false;
-			grid[x][y].mark = MARK_NONE;
-			grid[x][y].number = 0;
-		}
-	}
+
 	// picks random x,y values until found box that is not bomb, then sets it to bomb until NUMBOMBS has been reached
 	for(uint i = 0; i < NUMBOMBS; ++i){
 		uint x = 0, y = 0;
@@ -98,68 +84,65 @@ void initGrid(void)
 	}
 }
 
-void printNumbers(void)
-{
-	for(uint y = 0; y < GRIDY; ++y){
-		for(uint x = 0; x < GRIDX; ++x){
-			if(grid[x][y].bomb){
-				putc('B', stdout);
-				goto escape;
-			}
-			if(grid[x][y].number != 0){
-				putc(intToChar(grid[x][y].number), stdout);
-				goto escape;
-			}
-			putc('-', stdout);
-			escape:
-			putc(' ', stdout);
-		}
-		putc('\n', stdout);
-	}
-}
-
-void drawBox(uint x, uint y)
-{
-	if(grid[x][y].clear){
-		setColor(GREY2);
-		fillSquare(x*SCALE, y*SCALE, SCALE);
-		setColor(GREY3);
-		drawVLine(x*SCALE, y*SCALE, SCALE);
-		drawHLine(x*SCALE, y*SCALE, SCALE);
-		return;
-	}
-	setColor(GREY2);
-	fillSquare(x*SCALE, y*SCALE, SCALE);
-
-	setColor(GREY3);
-	drawHLine(x*SCALE,		(y+1)*SCALE-1,	SCALE-1);
-	drawVLine((x+1)*SCALE-1,	y*SCALE, 		SCALE-1);
-	drawHLine(x*SCALE+1,		(y+1)*SCALE-2,	SCALE-2);
-	drawVLine((x+1)*SCALE-2,	y*SCALE+1, 		SCALE-2);
-
-	setColor(GREY1);
-	drawVLine(x*SCALE, y*SCALE, SCALE);
-	drawHLine(x*SCALE, y*SCALE, SCALE);
-	drawVLine(x*SCALE+1, y*SCALE+1, SCALE-2);
-	drawHLine(x*SCALE+1, y*SCALE+1, SCALE-2);
-}
-
-void drawGrid()
-{
-	for(uint y = 0; y < GRIDY; ++y){
-		for(uint x = 0; x < GRIDX; ++x){
-			drawBox(x, y);
-		}
-	}
-}
-
 void loose()
 {
 	printf("You lost x_x\n");
 	exit(0);
 }
 
-void onClick(uint xpos, uint ypos)
+void clearAdjacentNoNums(uint x, uint y)
+{
+	if(y>0)
+		grid[x][y-1].clear |= !grid[x][y-1].bomb && !grid[x][y-1].number;
+	if(y<GRIDY-1)
+		grid[x][y+1].clear |= !grid[x][y+1].bomb && !grid[x][y+1].number;
+	if(x>0)
+		grid[x-1][y].clear |= !grid[x-1][y].bomb && !grid[x-1][y].number;
+	if(x<GRIDX-1)
+		grid[x+1][y].clear |= !grid[x+1][y].bomb && !grid[x+1][y].number;
+}
+
+// returns true if box with no number is cleared
+bool clearAround(uint x, uint y)
+{
+	bool ret = false;
+	for(uint yoff = y>0 ? y-1 : y; yoff < GRIDY && yoff <= y+1; yoff++){
+		for(uint xoff = x>0 ? x-1 : x; xoff < GRIDX && xoff <= x+1; xoff++){
+			ret |=  grid[xoff][yoff].number == 0 && !grid[xoff][yoff].clear;
+			grid[xoff][yoff].clear |= grid[xoff][yoff].mark != MARK_FLAG;
+		}
+	}
+	return ret;
+}
+
+void fill()
+{
+	uint clears;
+	do{
+		clears = 0;
+		for(uint y = 0; y < GRIDY; y++){
+			for(uint x = 0; x < GRIDX; x++){
+				if(grid[x][y].clear && !grid[x][y].bomb && !grid[x][y].number){
+					clears += clearAround(x, y);
+				}
+			}
+		}
+	}while(clears);
+}
+
+bool win()
+{
+	for(uint x = 0; x < GRIDX; x++){
+		for(uint y = 0; y < GRIDY; y++){
+			if(grid[x][y].bomb && grid[x][y].mark != MARK_FLAG)
+				return false;
+			if(grid[x][y].mark == MARK_FLAG && !grid[x][y].bomb)
+				return false;
+		}
+	}
+}
+
+void clickL(uint xpos, uint ypos)
 {
 	uint x = xpos/SCALE;
 	uint y = ypos/SCALE;
@@ -169,8 +152,22 @@ void onClick(uint xpos, uint ypos)
 		return;
 	if(grid[x][y].bomb)
 		loose();
-	else
-		grid[x][y].clear = true;
+	grid[x][y].clear = true;
+	clearAdjacentNoNums(x, y);
+	fill();
+	if(win())
+		printf("You win!\n");
+}
+
+void clickR(uint xpos, uint ypos)
+{
+	uint x = xpos/SCALE;
+	uint y = ypos/SCALE;
+	if(x >= GRIDX || y >= GRIDY)
+		return;
+	if(grid[x][y].clear)
+		return;
+	grid[x][y].mark = (grid[x][y].mark+1)%3;
 }
 
 int main(int argc, char *argv[])
@@ -204,9 +201,9 @@ int main(int argc, char *argv[])
 	putc('\n', stdout);
 	printNumbers();
 	while(1) {
+		events();
 		drawGrid();
 		draw();
-		events();
 	}
 	return 0;
 }
